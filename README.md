@@ -1,11 +1,11 @@
-# Orbit Sim
+# orbit_sim
 
-Orbital mechanics simulator (Kepler orbits).
+Orbital mechanics — two-body problem, Kepler orbits
 
 ## Usage
 
 ```bash
-python3 orbit_sim.py
+python3 orbit_sim.py --help
 ```
 
 ## License

@@ -1,11 +1,13 @@
-# orbit-sim
+# Orbit Sim
 
-Orbital mechanics simulator (Kepler, n-body)
+Orbital mechanics simulator (Kepler orbits).
 
 ## Usage
 
 ```bash
-python3 orbit_sim.py --help
+python3 orbit_sim.py
 ```
 
-Zero dependencies. Python 3.8+.
+## License
+
+MIT

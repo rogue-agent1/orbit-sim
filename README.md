@@ -1,9 +1,14 @@
-# Orbital Mechanics Simulator
+# orbit-sim
 
-Orbital Mechanics Simulator — zero-dependency Python implementation.
+Orbital mechanics simulator
 
 ## Usage
 
 ```bash
-python3 orbit_sim.py
+python3 orbit_sim.py --help
 ```
+
+## Features
+
+- Zero dependencies (Python 3.8+)
+- Single file implementation

@@ -1,27 +1,62 @@
 #!/usr/bin/env python3
-"""orbit_sim - Kepler orbit simulation."""
-import sys,argparse,json,math
-def simulate_orbit(mass_central=1e6,mass_orbiter=1,r0=100,v0=None,G=1,dt=0.01,steps=10000):
-    if v0 is None:v0=math.sqrt(G*mass_central/r0)
-    x,y=r0,0.0;vx,vy=0.0,v0;history=[]
-    for i in range(steps):
-        r=math.sqrt(x**2+y**2)
-        if r<1:break
-        a=-G*mass_central/r**3
-        ax=a*x;ay=a*y
-        vx+=ax*dt;vy+=ay*dt;x+=vx*dt;y+=vy*dt
-        if i%(steps//100)==0:
-            ke=0.5*mass_orbiter*(vx**2+vy**2)
-            pe=-G*mass_central*mass_orbiter/r
-            history.append({"t":round(i*dt,2),"x":round(x,2),"y":round(y,2),"r":round(r,2),"energy":round(ke+pe,2)})
-    return history
+"""Orbital Mechanics - N-body gravitational simulation with Verlet integration."""
+import sys, math
+
+G = 6.674e-11
+
+class Body:
+    def __init__(self, name, mass, x, y, vx=0, vy=0):
+        self.name=name;self.mass=mass;self.x=x;self.y=y;self.vx=vx;self.vy=vy;self.ax=0;self.ay=0
+
+def compute_forces(bodies):
+    for b in bodies: b.ax=0;b.ay=0
+    for i,a in enumerate(bodies):
+        for b in bodies[i+1:]:
+            dx=b.x-a.x;dy=b.y-a.y;r2=dx*dx+dy*dy;r=math.sqrt(r2)
+            if r<1e6: continue
+            f=G*a.mass*b.mass/r2;fx=f*dx/r;fy=f*dy/r
+            a.ax+=fx/a.mass;a.ay+=fy/a.mass
+            b.ax-=fx/b.mass;b.ay-=fy/b.mass
+
+def step(bodies, dt):
+    for b in bodies:
+        b.x+=b.vx*dt+0.5*b.ax*dt*dt
+        b.y+=b.vy*dt+0.5*b.ay*dt*dt
+    old_a = [(b.ax,b.ay) for b in bodies]
+    compute_forces(bodies)
+    for i,b in enumerate(bodies):
+        b.vx+=0.5*(old_a[i][0]+b.ax)*dt
+        b.vy+=0.5*(old_a[i][1]+b.ay)*dt
+
+def energy(bodies):
+    ke=sum(0.5*b.mass*(b.vx**2+b.vy**2) for b in bodies)
+    pe=0
+    for i,a in enumerate(bodies):
+        for b in bodies[i+1:]:
+            r=math.sqrt((a.x-b.x)**2+(a.y-b.y)**2)
+            if r>0: pe-=G*a.mass*b.mass/r
+    return ke+pe
+
 def main():
-    p=argparse.ArgumentParser(description="Orbit simulator")
-    p.add_argument("--radius",type=float,default=100);p.add_argument("--velocity",type=float)
-    p.add_argument("--steps",type=int,default=50000);p.add_argument("--mass",type=float,default=1e6)
-    args=p.parse_args()
-    history=simulate_orbit(args.mass,r0=args.radius,v0=args.velocity,steps=args.steps)
-    min_r=min(h["r"] for h in history) if history else 0
-    max_r=max(h["r"] for h in history) if history else 0
-    print(json.dumps({"initial_radius":args.radius,"periapsis":round(min_r,2),"apoapsis":round(max_r,2),"eccentricity":round((max_r-min_r)/(max_r+min_r),4) if max_r+min_r>0 else 0,"trajectory_points":len(history),"sample":history[:20]},indent=2))
-if __name__=="__main__":main()
+    AU=1.496e11
+    sun=Body("Sun",1.989e30,0,0)
+    earth=Body("Earth",5.972e24,AU,0,0,29780)
+    mars=Body("Mars",6.39e23,1.524*AU,0,0,24077)
+    bodies=[sun,earth,mars]
+    compute_forces(bodies)
+    dt=86400;days=365
+    print(f"=== Orbital Mechanics ({days} days) ===\n")
+    print(f"Initial energy: {energy(bodies):.3e} J")
+    for day in range(days):
+        step(bodies, dt)
+        if day % 90 == 0:
+            print(f"  Day {day:3d}:", end="")
+            for b in bodies[1:]:
+                r=math.sqrt(b.x**2+b.y**2)/AU
+                print(f" {b.name}={r:.3f}AU", end="")
+            print()
+    print(f"\nFinal energy: {energy(bodies):.3e} J")
+    drift=abs(energy(bodies)-energy([Body("Sun",1.989e30,0,0),Body("Earth",5.972e24,AU,0,0,29780),Body("Mars",6.39e23,1.524*AU,0,0,24077)]))
+
+if __name__ == "__main__":
+    main()

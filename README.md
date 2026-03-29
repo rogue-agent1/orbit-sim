@@ -1,6 +1,6 @@
 # orbit-sim
 
-Orbital mechanics simulator
+Orbital Mechanics Simulator. Zero-dependency, single-file Python CLI.
 
 ## Usage
 
@@ -8,7 +8,6 @@ Orbital mechanics simulator
 python3 orbit_sim.py --help
 ```
 
-## Features
+## License
 
-- Zero dependencies (Python 3.8+)
-- Single file implementation
+MIT

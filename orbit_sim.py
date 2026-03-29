@@ -1,28 +1,34 @@
 #!/usr/bin/env python3
-"""Orbital mechanics — two-body simulation, Kepler elements."""
+"""Keplerian orbits and orbital mechanics."""
 import sys, math
-def simulate(m1=1e10, m2=1, r0=100, v0=None, G=6.674e-11, dt=0.1, steps=1000):
-    if v0 is None: v0=math.sqrt(G*m1/r0)
-    x,y=r0,0.0; vx,vy=0.0,v0; points=[]
+
+def orbit(r0, v0, G=1, M=1000, dt=0.001, steps=10000):
+    x, y = r0; vx, vy = v0; traj = [(x,y)]
     for _ in range(steps):
-        r=math.sqrt(x*x+y*y); a=-G*m1/(r*r*r)
-        vx+=a*x*dt; vy+=a*y*dt; x+=vx*dt; y+=vy*dt
-        points.append((x,y))
-    return points
-def ascii_orbit(points, w=60, h=30):
-    xs=[p[0] for p in points]; ys=[p[1] for p in points]
-    mnx,mxx=min(xs),max(xs); mny,mxy=min(ys),max(ys)
-    rx,ry=mxx-mnx or 1, mxy-mny or 1
-    grid=[[" "]*w for _ in range(h)]
-    grid[h//2][w//2]="*"
-    for x,y in points:
-        c=int((x-mnx)/rx*(w-1)); r=int((y-mny)/ry*(h-1))
-        if 0<=r<h and 0<=c<w: grid[r][c]="."
-    for row in grid: print("".join(row))
-def cli():
-    steps=int(sys.argv[1]) if len(sys.argv)>1 else 2000
-    points=simulate(steps=steps)
-    ascii_orbit(points)
-    xs=[p[0] for p in points]; ys=[p[1] for p in points]
-    print(f"  Steps: {steps}, X range: [{min(xs):.1f}, {max(xs):.1f}]")
-if __name__=="__main__": cli()
+        r = math.sqrt(x**2+y**2)+1e-10
+        ax = -G*M*x/r**3; ay = -G*M*y/r**3
+        vx += ax*dt; vy += ay*dt; x += vx*dt; y += vy*dt
+        traj.append((x,y))
+    return traj
+
+def orbital_elements(r, v, mu=1000):
+    x,y = r; vx,vy = v; r_mag = math.sqrt(x**2+y**2)
+    v_mag = math.sqrt(vx**2+vy**2)
+    energy = 0.5*v_mag**2 - mu/r_mag
+    a = -mu/(2*energy) if energy != 0 else float('inf')
+    h = x*vy - y*vx
+    e = math.sqrt(1 + 2*energy*h**2/mu**2) if mu > 0 else 0
+    return {"semi_major": a, "eccentricity": e, "energy": energy, "angular_momentum": h}
+
+def main():
+    # Circular orbit
+    r = 10; v_circ = math.sqrt(1000/r)
+    traj = orbit((r,0),(0,v_circ), steps=20000)
+    elem = orbital_elements((r,0),(0,v_circ))
+    print(f"Circular: a={elem['semi_major']:.2f}, e={elem['eccentricity']:.4f}")
+    # Elliptical
+    traj2 = orbit((r,0),(0,v_circ*0.7), steps=20000)
+    elem2 = orbital_elements((r,0),(0,v_circ*0.7))
+    print(f"Elliptical: a={elem2['semi_major']:.2f}, e={elem2['eccentricity']:.4f}")
+
+if __name__ == "__main__": main()

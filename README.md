@@ -1,13 +1,9 @@
-# orbit_sim
+# Orbital Mechanics Simulator
 
-Orbital mechanics — two-body problem, Kepler orbits
+Orbital Mechanics Simulator — zero-dependency Python implementation.
 
 ## Usage
 
 ```bash
-python3 orbit_sim.py --help
+python3 orbit_sim.py
 ```
-
-## License
-
-MIT

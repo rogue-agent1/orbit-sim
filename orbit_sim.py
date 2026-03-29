@@ -1,62 +1,55 @@
-#!/usr/bin/env python3
-"""Orbital Mechanics - N-body gravitational simulation with Verlet integration."""
-import sys, math
+import argparse, math
 
-G = 6.674e-11
+def simulate(altitude_km=400, steps=5000, dt=10):
+    G = 6.674e-11
+    M = 5.972e24  # Earth mass
+    R = 6.371e6   # Earth radius
+    r0 = R + altitude_km * 1000
+    v_orbital = math.sqrt(G * M / r0)
+    x, y = r0, 0
+    vx, vy = 0, v_orbital
+    history = []
+    for step in range(steps):
+        r = math.sqrt(x*x + y*y)
+        a = -G * M / (r * r)
+        ax = a * x / r
+        ay = a * y / r
+        vx += ax * dt
+        vy += ay * dt
+        x += vx * dt
+        y += vy * dt
+        alt = (math.sqrt(x*x + y*y) - R) / 1000
+        if step % (steps//20) == 0:
+            history.append((step*dt, x/1e6, y/1e6, alt, math.sqrt(vx*vx+vy*vy)))
+    return history
 
-class Body:
-    def __init__(self, name, mass, x, y, vx=0, vy=0):
-        self.name=name;self.mass=mass;self.x=x;self.y=y;self.vx=vx;self.vy=vy;self.ax=0;self.ay=0
-
-def compute_forces(bodies):
-    for b in bodies: b.ax=0;b.ay=0
-    for i,a in enumerate(bodies):
-        for b in bodies[i+1:]:
-            dx=b.x-a.x;dy=b.y-a.y;r2=dx*dx+dy*dy;r=math.sqrt(r2)
-            if r<1e6: continue
-            f=G*a.mass*b.mass/r2;fx=f*dx/r;fy=f*dy/r
-            a.ax+=fx/a.mass;a.ay+=fy/a.mass
-            b.ax-=fx/b.mass;b.ay-=fy/b.mass
-
-def step(bodies, dt):
-    for b in bodies:
-        b.x+=b.vx*dt+0.5*b.ax*dt*dt
-        b.y+=b.vy*dt+0.5*b.ay*dt*dt
-    old_a = [(b.ax,b.ay) for b in bodies]
-    compute_forces(bodies)
-    for i,b in enumerate(bodies):
-        b.vx+=0.5*(old_a[i][0]+b.ax)*dt
-        b.vy+=0.5*(old_a[i][1]+b.ay)*dt
-
-def energy(bodies):
-    ke=sum(0.5*b.mass*(b.vx**2+b.vy**2) for b in bodies)
-    pe=0
-    for i,a in enumerate(bodies):
-        for b in bodies[i+1:]:
-            r=math.sqrt((a.x-b.x)**2+(a.y-b.y)**2)
-            if r>0: pe-=G*a.mass*b.mass/r
-    return ke+pe
+def plot_orbit(history, w=50, h=25):
+    xs = [p[1] for p in history]
+    ys = [p[2] for p in history]
+    xmin, xmax = min(xs)-0.5, max(xs)+0.5
+    ymin, ymax = min(ys)-0.5, max(ys)+0.5
+    grid = [[" "]*w for _ in range(h)]
+    # Draw Earth
+    cx = int((0 - xmin) / (xmax - xmin) * (w-1))
+    cy = int((0 - ymin) / (ymax - ymin) * (h-1))
+    if 0 <= cy < h and 0 <= cx < w: grid[cy][cx] = "⊕"
+    for x, y in zip(xs, ys):
+        col = int((x - xmin) / (xmax - xmin) * (w-1))
+        row = int((y - ymin) / (ymax - ymin) * (h-1))
+        if 0 <= row < h and 0 <= col < w: grid[row][col] = "·"
+    for r in grid: print("".join(r))
 
 def main():
-    AU=1.496e11
-    sun=Body("Sun",1.989e30,0,0)
-    earth=Body("Earth",5.972e24,AU,0,0,29780)
-    mars=Body("Mars",6.39e23,1.524*AU,0,0,24077)
-    bodies=[sun,earth,mars]
-    compute_forces(bodies)
-    dt=86400;days=365
-    print(f"=== Orbital Mechanics ({days} days) ===\n")
-    print(f"Initial energy: {energy(bodies):.3e} J")
-    for day in range(days):
-        step(bodies, dt)
-        if day % 90 == 0:
-            print(f"  Day {day:3d}:", end="")
-            for b in bodies[1:]:
-                r=math.sqrt(b.x**2+b.y**2)/AU
-                print(f" {b.name}={r:.3f}AU", end="")
-            print()
-    print(f"\nFinal energy: {energy(bodies):.3e} J")
-    drift=abs(energy(bodies)-energy([Body("Sun",1.989e30,0,0),Body("Earth",5.972e24,AU,0,0,29780),Body("Mars",6.39e23,1.524*AU,0,0,24077)]))
+    p = argparse.ArgumentParser(description="Orbit simulator")
+    p.add_argument("-a", "--altitude", type=float, default=400, help="Altitude in km")
+    p.add_argument("-n", "--steps", type=int, default=5000)
+    args = p.parse_args()
+    history = simulate(args.altitude, args.steps)
+    print(f"Orbit at {args.altitude} km altitude")
+    plot_orbit(history)
+    print(f"\n{'Time(s)':>8} {'X(Mm)':>8} {'Y(Mm)':>8} {'Alt(km)':>10} {'V(m/s)':>10}")
+    for t, x, y, alt, v in history:
+        print(f"{t:8.0f} {x:8.2f} {y:8.2f} {alt:10.1f} {v:10.1f}")
 
 if __name__ == "__main__":
     main()

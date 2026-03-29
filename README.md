@@ -1,9 +1,17 @@
-# orbit-sim
+# orbit_sim
 
-Orbital mechanics simulator. Zero-dependency, single-file Python CLI.
+Orbital mechanics simulator (Kepler orbits)
+
+Single-file, zero-dependency Python CLI tool.
 
 ## Usage
 
 ```bash
-python3 orbit_sim.py --help
+python orbit_sim.py --help
+```
+
+## Test
+
+```bash
+python -c "import orbit_sim; orbit_sim.test()"
 ```
